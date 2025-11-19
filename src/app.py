@@ -1,3 +1,7 @@
+from fastapi import Query
+
+
+
 """
 High School Management System API
 
@@ -116,3 +120,21 @@ def signup_for_activity(activity_name: str, email: str):
     # Add student
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
+
+@app.post("/activities/{activity_name}/unregister")
+def unregister_from_activity(activity_name: str, email: str = Query(...)):
+    """Rimuove un partecipante da un'attività (case-insensitive)"""
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    activity = activities[activity_name]
+    # Confronto case-insensitive e senza spazi
+    normalized_email = email.strip().lower()
+    found = None
+    for p in activity["participants"]:
+        if p.strip().lower() == normalized_email:
+            found = p
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Participant not found in this activity")
+    activity["participants"].remove(found)
+    return {"message": f"{email} rimosso da {activity_name}"}

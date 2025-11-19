@@ -20,6 +20,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Crea la lista dei partecipanti senza bullet e con icona delete
+        let participantsHTML = "";
+        if (details.participants.length > 0) {
+          participantsHTML = `<div class="participants-list">` +
+            details.participants.map(participant =>
+              `<span class="participant-item">${participant} <span class="delete-participant" title="Rimuovi" data-activity="${encodeURIComponent(name)}" data-email="${encodeURIComponent(participant)}">&#128465;</span></span>`
+            ).join("") + `</div>`;
+        } else {
+          participantsHTML = `<span style="color:#888;">Nessun partecipante ancora</span>`;
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
@@ -27,16 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="activity-card-participants">
             <h5>Partecipanti</h5>
-            ${
-              details.participants.length > 0
-                ? `<ul>${details.participants
-                    .map(
-                      (participant) =>
-                        `<li>${participant}</li>`
-                    )
-                    .join("")}</ul>`
-                : `<span style="color:#888;">Nessun partecipante ancora</span>`
-            }
+            ${participantsHTML}
           </div>
         `;
 
@@ -75,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Aggiorna la lista delle attività
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -96,4 +99,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize app
   fetchActivities();
+  // Gestione click su icona delete
+  document.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-participant")) {
+      const activity = decodeURIComponent(event.target.getAttribute("data-activity"));
+      const email = decodeURIComponent(event.target.getAttribute("data-email"));
+      if (!activity || !email) return;
+      if (!confirm(`Vuoi davvero rimuovere ${email} da ${activity}?`)) return;
+      try {
+        const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+          method: "POST"
+        });
+        if (response.ok) {
+          fetchActivities();
+        } else {
+          const result = await response.json();
+          alert(result.detail || "Errore nella rimozione del partecipante.");
+        }
+      } catch (error) {
+        alert("Errore di rete nella rimozione del partecipante.");
+      }
+    }
+  });
 });
